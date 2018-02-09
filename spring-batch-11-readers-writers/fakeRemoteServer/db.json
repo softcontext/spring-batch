@@ -1,0 +1,19 @@
+{
+	"students": [
+		{
+			"emailAddress": "tony.tester@gmail.com",
+			"name": "Tony Tester",
+			"purchasedPackage": "master"
+		},
+		{
+			"emailAddress": "nick.newbie@gmail.com",
+			"name": "Nick Newbie",
+			"purchasedPackage": "starter"
+		},
+		{
+			"emailAddress": "ian.intermediate@gmail.com",
+			"name": "Ian Intermediate",
+			"purchasedPackage": "intermediate"
+		}
+	]
+}

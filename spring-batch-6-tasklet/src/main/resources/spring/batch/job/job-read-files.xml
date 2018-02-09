@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:batch="http://www.springframework.org/schema/batch"
+	xsi:schemaLocation="http://www.springframework.org/schema/batch http://www.springframework.org/schema/batch/spring-batch.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+	<import resource="../config/context.xml" />
+
+	<bean id="domain" class="com.example.demo.tasklet.Domain" scope="prototype"/>
+
+	<bean id="flatFileItemReader" class="org.springframework.batch.item.file.FlatFileItemReader">
+		<property name="lineMapper">
+			<bean class="org.springframework.batch.item.file.mapping.DefaultLineMapper">
+				<property name="lineTokenizer">
+					<bean class="org.springframework.batch.item.file.transform.DelimitedLineTokenizer">
+						<property name="names" value="id, domain" /> <!-- 한 줄 씩 자르고 두 개의 항목을 갖는다. -->
+					</bean>
+				</property>
+				<property name="fieldSetMapper">
+					<bean class="org.springframework.batch.item.file.mapping.BeanWrapperFieldSetMapper">
+						<property name="prototypeBeanName" value="domain" /> <!-- Domain 클래스를 사용하고 멤버변수명으로 구분하여 할당한다. -->
+					</bean>
+				</property>
+			</bean>
+		</property>
+	</bean>
+	
+	<!-- First Step >> #1 : Reader -->
+	<bean id="multiResourceReader" class="org.springframework.batch.item.file.MultiResourceItemReader">
+		<property name="resources" value="file:csv/inputs/domain-*.csv" /> <!-- 해당 폴더 밑에 다수의 .csv 파일을 작업대상으로 삼는다. -->
+		<property name="delegate" ref="flatFileItemReader" /> <!-- 파일 하나씩 처리는 FlatFileItemReader에게 맡긴다. -->
+	</bean>
+	
+	<!-- First Step >> #2 : Writer -->
+	<bean id="flatFileItemWriter" class="org.springframework.batch.item.file.FlatFileItemWriter">
+		<property name="resource" value="file:csv/outputs/domain.all.csv" /> <!-- 작업결과를 저장할 파일명을 설정한다. -->
+		<property name="appendAllowed" value="false" />
+		<property name="lineAggregator">
+			<bean class="org.springframework.batch.item.file.transform.DelimitedLineAggregator">
+				<property name="delimiter" value="," />
+				<property name="fieldExtractor">
+					<bean class="org.springframework.batch.item.file.transform.BeanWrapperFieldExtractor">
+						<property name="names" value="id, domain" />
+					</bean>
+				</property>
+			</bean>
+		</property>
+	</bean>
+	
+	<!-- Second Step >> #1 : Tasklet -->
+	<bean id="fileDeletingTasklet" class="com.example.demo.tasklet.FileDeletingTasklet">
+		<property name="directory" value="file:csv/inputs/" /> <!-- inputs 폴더 밑에 존재하는 파일들을 삭제한다. -->
+	</bean>
+
+	<batch:job id="readMultiFileJob">
+		<batch:step id="step1" next="deleteDir">
+			<batch:tasklet>
+				<batch:chunk reader="multiResourceReader" writer="flatFileItemWriter" commit-interval="1" />
+			</batch:tasklet>
+		</batch:step>
+		<batch:step id="deleteDir">
+			<batch:tasklet ref="fileDeletingTasklet" />
+		</batch:step>
+	</batch:job>
+
+</beans>
